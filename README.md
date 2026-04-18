@@ -69,6 +69,33 @@ Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.op
 - `GameStats` is a completely separate saveable added as an autoload — career totals persist across games and slots without the library knowing it exists.
 - `Arena.event_log` is an array-of-dicts (`{t, kind, block}`) that shows structured collection data round-tripping cleanly.
 
+### What the demo actually saves
+
+**Envelope (library-level, schema v2):**
+- `schema_version` — format version, gated on load
+- `hmac` — SHA256 signature over the body
+- `body` — JSON-stringified inner payload
+
+**Inner payload (one dict per slot):**
+- `game_version` — for cross-build diagnostics
+- `saved_at_unix` — timestamp of the save
+- `play_time_seconds` — elapsed time at the moment of save
+- `level_name` — which scene was active
+- `saveables` — dict keyed by `save_id` holding each saveable's data
+
+**Sidecar (`.meta.tres`, unencrypted, per slot):**
+- `slot_id`, `display_name`, `saved_at_unix`, `play_time_seconds`, `level_name`, `game_version`, `thumbnail` (field exists, not populated)
+
+**Per-saveable contents in this project:**
+
+| Saveable | `save_id` | Fields |
+|---|---|---|
+| `Arena` | `"arena"` | `elapsed_seconds`, `num_blocks`, `blocks` (array of `{scene, state}`), `winner_index`, `event_log` (array of `{t, kind, block?}`) |
+| `Block` (inside each `blocks[].state`) | — (owned by Arena) | `hp`, `max_hp`, `color`, `name`, `alive`, `is_player`, `jumps`, `walls_bumped`, `pos`, `rot`, `lv` (linear velocity), `av` (angular velocity) |
+| `GameStats` | `"game_stats"` | `games_played`, `wins`, `total_jumps`, `total_walls_bumped` |
+
+Each field in each saveable's `load_data` uses `.get(key, default)`, so adding or removing any entry is safe against older/newer saves.
+
 ## What it's lacking (honest list)
 
 - **The "encryption" is not real security.** The password is hardcoded in `save_config.gd`. A determined user can dump the binary and decrypt saves. It stops a player from opening the `.save` in a text editor and editing their HP to 9999 — nothing more. For real security you'd derive a key from the user's OS account or a server.
