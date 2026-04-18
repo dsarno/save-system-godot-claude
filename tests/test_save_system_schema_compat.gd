@@ -11,22 +11,18 @@ const SLOT := 921
 var _sys: Node
 
 
-class FakeSaveable:
-	extends Node
-	var save_id: String = "schema_fake"
-	var captured: Dictionary = {}
-	var loaded: Dictionary = {}
-
-	func save_data() -> Dictionary:
-		return captured.duplicate(true)
+## Subclass of FakeSaveable that uses .get(…, default) to demonstrate the
+## backward-compat contract (old saves load with defaults for missing keys).
+class DefaultingSaveable:
+	extends FakeSaveable
 
 	func load_data(d: Dictionary) -> void:
-		# Use .get with defaults — documents the contract.
 		loaded = {
 			"hp": d.get("hp", 100),
 			"name": d.get("name", "default_name"),
 			"new_field": d.get("new_field", "default_new"),
 		}
+		load_count += 1
 
 
 func suite_name() -> String:
@@ -46,14 +42,15 @@ func suite_teardown() -> void:
 
 func setup() -> void:
 	_sys.delete_slot(SLOT)
-	_sys._registered.clear()
+	_sys.clear_registered()
 
 
 # ----- missing keys get defaults -----
 
 func test_missing_key_yields_default() -> void:
 	# Simulate an "old" save that doesn't include `new_field`.
-	var fake := FakeSaveable.new()
+	var fake := DefaultingSaveable.new()
+	fake.save_id = "schema_fake"
 	fake.captured = {"hp": 42, "name": "hero"}
 	_sys.register(fake)
 	_sys.save_to_slot(SLOT)
@@ -83,7 +80,8 @@ func test_future_schema_version_refused() -> void:
 	}
 	SaveAtomicWrite.write_encrypted_json(path, payload, SaveConfig.ENCRYPTION_PASSWORD)
 
-	var fake := FakeSaveable.new()
+	var fake := DefaultingSaveable.new()
+	fake.save_id = "schema_fake"
 	fake.loaded = {"hp": 999}
 	_sys.register(fake)
 
@@ -108,17 +106,17 @@ func test_missing_schema_version_refused() -> void:
 func test_saveable_not_in_save_is_untouched() -> void:
 	# Save with one saveable; load with two registered. The second should not
 	# receive load_data (it wasn't in the save).
-	var a := FakeSaveable.new()
+	var a := DefaultingSaveable.new()
 	a.save_id = "present"
 	a.captured = {"hp": 7}
 	_sys.register(a)
 	_sys.save_to_slot(SLOT)
-	_sys._registered.clear()
+	_sys.clear_registered()
 
-	var a2 := FakeSaveable.new()
+	var a2 := DefaultingSaveable.new()
 	a2.save_id = "present"
 	a2.loaded = {"hp": 0, "name": "before", "new_field": "before"}
-	var b := FakeSaveable.new()
+	var b := DefaultingSaveable.new()
 	b.save_id = "absent"
 	b.loaded = {"hp": 0, "name": "before_b", "new_field": "before_b"}
 	_sys.register(a2)

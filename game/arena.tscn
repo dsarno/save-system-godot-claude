@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://23fa1dl5m40e" path="res://game/arena.gd" id="1_lqfih"]
 [ext_resource type="PhysicsMaterial" uid="uid://b02vyclcmlsv4" path="res://game/slick.tres" id="2_l8ka0"]
+[ext_resource type="Material" uid="uid://dqq4x0ho1jgwq" path="res://game/floor_material.tres" id="3_tmngc"]
+[ext_resource type="Material" uid="uid://b38h3w4oc0o6w" path="res://game/wall_material.tres" id="4_y5byq"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_l8ka0"]
 size = Vector3(20, 0.2, 20)
@@ -21,11 +23,35 @@ size = Vector3(0.5, 3, 20)
 [sub_resource type="BoxShape3D" id="BoxShape3D_pvdjw"]
 size = Vector3(0.5, 3, 20)
 
+[sub_resource type="Environment" id="Environment_3hi6g"]
+background_color = Color(0.015686275, 0.023529412, 0.101960786, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.16470589, 0.20784314, 0.4392157, 1)
+ambient_light_energy = 0.6
+glow_enabled = true
+glow_intensity = 1.0
+glow_strength = 1.4
+glow_bloom = 0.2
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_light_color = Color(0.039215688, 0.050980393, 0.16470589, 1)
+fog_density = 0.015
+fog_height = 1.0
+fog_height_density = 0.05
+
+[sub_resource type="BoxMesh" id="BoxMesh_pvdjw"]
+size = Vector3(20.2, 0.12, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_yql31"]
+size = Vector3(0.12, 0.12, 20.2)
+
 [node name="Arena" type="Node3D" unique_id=89295594]
 script = ExtResource("1_lqfih")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=1956994223]
 transform = Transform3D(0.76604444, -0.52654076, 0.3686878, 0, 0.57357645, 0.81915206, -0.6427876, -0.62750685, 0.43938506, 0, 0, 0)
+light_color = Color(0.7764706, 0.8392157, 1, 1)
+light_energy = 0.25
 
 [node name="Camera" type="Camera3D" parent="." unique_id=1609244704]
 transform = Transform3D(1, 0, 0, 0, 0.64278764, 0.76604444, 0, -0.76604444, 0.64278764, 0, 16, 14)
@@ -36,12 +62,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 physics_material_override = ExtResource("2_l8ka0")
 
 [node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=400711950]
+material_override = ExtResource("3_tmngc")
 mesh = SubResource("BoxMesh_l8ka0")
 
 [node name="Collision" type="CollisionShape3D" parent="Floor" unique_id=1925154930]
 shape = SubResource("BoxShape3D_220v0")
 
-[node name="Walls" type="StaticBody3D" parent="." unique_id=1305204302]
+[node name="Walls" type="StaticBody3D" parent="." unique_id=1305204302 groups=["wall"]]
 
 [node name="North" type="CollisionShape3D" parent="Walls" unique_id=1464124533]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -10)
@@ -60,3 +87,28 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.5, 0)
 shape = SubResource("BoxShape3D_pvdjw")
 
 [node name="Blocks" type="Node3D" parent="." unique_id=677281335]
+
+[node name="World" type="WorldEnvironment" parent="." unique_id=1782524638]
+environment = SubResource("Environment_3hi6g")
+
+[node name="Rails" type="Node3D" parent="." unique_id=1810937347]
+
+[node name="RailN" type="MeshInstance3D" parent="Rails" unique_id=1875351848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -10)
+material_override = ExtResource("4_y5byq")
+mesh = SubResource("BoxMesh_pvdjw")
+
+[node name="RailS" type="MeshInstance3D" parent="Rails" unique_id=1592139816]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 10)
+material_override = ExtResource("4_y5byq")
+mesh = SubResource("BoxMesh_pvdjw")
+
+[node name="RailE" type="MeshInstance3D" parent="Rails" unique_id=1880650987]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3, 0)
+material_override = ExtResource("4_y5byq")
+mesh = SubResource("BoxMesh_yql31")
+
+[node name="RailW" type="MeshInstance3D" parent="Rails" unique_id=867833487]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3, 0)
+material_override = ExtResource("4_y5byq")
+mesh = SubResource("BoxMesh_yql31")

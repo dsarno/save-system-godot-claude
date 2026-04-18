@@ -41,6 +41,12 @@ func unregister(node: Object) -> void:
 	_registered.erase(node)
 
 
+## Clear every explicitly-registered saveable. Mostly useful for tests that
+## rebuild their fixture between cases without needing a full editor reload.
+func clear_registered() -> void:
+	_registered.clear()
+
+
 ## Save the current state of all saveables to the given slot.
 func save_to_slot(slot_id: int, level_name: String = "", play_time_seconds: float = 0.0) -> Error:
 	_ensure_saves_dir()

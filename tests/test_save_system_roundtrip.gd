@@ -11,23 +11,6 @@ const TEST_SLOT_2 := 902
 var _sys: Node
 
 
-## Minimal fake saveable used throughout the suite. Not a production pattern —
-## real saveables mix save_data with the node's own logic.
-class FakeSaveable:
-	extends Node
-	var save_id: String = "fake"
-	var captured: Dictionary = {}
-	var load_arg: Dictionary = {}
-	var load_count: int = 0
-
-	func save_data() -> Dictionary:
-		return captured.duplicate(true)
-
-	func load_data(d: Dictionary) -> void:
-		load_arg = d
-		load_count += 1
-
-
 func suite_name() -> String:
 	return "save_system_roundtrip"
 
@@ -47,7 +30,7 @@ func suite_teardown() -> void:
 func setup() -> void:
 	_sys.delete_slot(TEST_SLOT)
 	_sys.delete_slot(TEST_SLOT_2)
-	_sys._registered.clear()
+	_sys.clear_registered()
 
 
 func _mk(save_id: String, captured: Dictionary) -> FakeSaveable:
@@ -78,12 +61,12 @@ func test_roundtrip_primitives() -> void:
 	err = _sys.load_from_slot(TEST_SLOT)
 	assert_eq(err, OK)
 	assert_eq(fake.load_count, 1, "load_data should be called once")
-	assert_eq(fake.load_arg.hp, 42)
-	assert_eq(fake.load_arg.pos.x, 1.5)
-	assert_eq(fake.load_arg.pos.z, 3.5)
-	assert_eq(fake.load_arg.flags.size(), 3)
-	assert_eq(fake.load_arg.name, "hero")
-	assert_eq(fake.load_arg.rate, 0.75)
+	assert_eq(fake.loaded.hp, 42)
+	assert_eq(fake.loaded.pos.x, 1.5)
+	assert_eq(fake.loaded.pos.z, 3.5)
+	assert_eq(fake.loaded.flags.size(), 3)
+	assert_eq(fake.loaded.name, "hero")
+	assert_eq(fake.loaded.rate, 0.75)
 
 	fake.free()
 
@@ -101,10 +84,10 @@ func test_multiple_saveables_get_distinct_payloads() -> void:
 	b.captured = {}
 
 	assert_eq(_sys.load_from_slot(TEST_SLOT), OK)
-	assert_eq(a.load_arg.v, 1)
-	assert_eq(a.load_arg.label, "alpha")
-	assert_eq(b.load_arg.v, 2)
-	assert_eq(b.load_arg.label, "beta")
+	assert_eq(a.loaded.v, 1)
+	assert_eq(a.loaded.label, "alpha")
+	assert_eq(b.loaded.v, 2)
+	assert_eq(b.loaded.label, "beta")
 
 	a.free()
 	b.free()
@@ -136,7 +119,7 @@ func test_saveable_without_save_data_method_is_skipped() -> void:
 	assert_eq(_sys.save_to_slot(TEST_SLOT), OK, "save should skip the plain Node cleanly")
 	fake.captured = {}
 	assert_eq(_sys.load_from_slot(TEST_SLOT), OK)
-	assert_eq(fake.load_arg.ok, true)
+	assert_eq(fake.loaded.ok, true)
 
 	plain.free()
 	fake.free()
@@ -150,6 +133,6 @@ func test_empty_save_id_still_roundtrips_via_fallback() -> void:
 	assert_eq(_sys.save_to_slot(TEST_SLOT), OK)
 	noid.captured = {}
 	assert_eq(_sys.load_from_slot(TEST_SLOT), OK)
-	assert_eq(noid.load_arg.tag, "no_id", "empty save_id should still roundtrip via fallback id")
+	assert_eq(noid.loaded.tag, "no_id", "empty save_id should still roundtrip via fallback id")
 
 	noid.free()

@@ -11,17 +11,14 @@ const SLOT := 931
 var _sys: Node
 
 
-class FakeSaveable:
-	extends Node
-	var save_id: String = "sec_fake"
-	var captured: Dictionary = {"hp": 42, "secret": "you_should_not_read_me"}
-	var loaded: Dictionary = {}
+const SECRET_MARKER := "you_should_not_read_me"
 
-	func save_data() -> Dictionary:
-		return captured.duplicate(true)
 
-	func load_data(d: Dictionary) -> void:
-		loaded = d
+func _new_secret_fake() -> FakeSaveable:
+	var f := FakeSaveable.new()
+	f.save_id = "sec_fake"
+	f.captured = {"hp": 42, "secret": SECRET_MARKER}
+	return f
 
 
 func suite_name() -> String:
@@ -41,7 +38,7 @@ func suite_teardown() -> void:
 
 func setup() -> void:
 	_sys.delete_slot(SLOT)
-	_sys._registered.clear()
+	_sys.clear_registered()
 
 
 func _save_path() -> String:
@@ -51,21 +48,20 @@ func _save_path() -> String:
 # ----- file contents are not plain text -----
 
 func test_save_file_is_not_plain_text_json() -> void:
-	var fake := FakeSaveable.new()
+	var fake := _new_secret_fake()
 	_sys.register(fake)
 	_sys.save_to_slot(SLOT)
 
-	# Read raw bytes (bypassing decryption) and confirm we can't parse the
-	# secret back. An unencrypted file would show "you_should_not_read_me".
+	# Read raw bytes (bypassing decryption) and confirm the marker doesn't leak.
+	# An unencrypted file would show SECRET_MARKER.
 	var f := FileAccess.open(_save_path(), FileAccess.READ)
 	assert_true(f != null, "should be able to open for reading")
 	var raw := f.get_as_text()
 	f.close()
-	assert_false(raw.contains("you_should_not_read_me"),
+	assert_false(raw.contains(SECRET_MARKER),
 		"plaintext secret must not appear in encrypted save bytes")
 	assert_false(raw.contains("\"hp\""), "JSON structure must not appear plainly")
 
-	# And JSON.parse_string on the raw bytes fails or yields non-dict.
 	var parsed: Variant = JSON.parse_string(raw)
 	assert_true(parsed == null or not (parsed is Dictionary),
 		"raw save bytes must not parse as JSON dict")
@@ -75,11 +71,10 @@ func test_save_file_is_not_plain_text_json() -> void:
 # ----- wrong password fails cleanly -----
 
 func test_wrong_password_load_fails() -> void:
-	var fake := FakeSaveable.new()
+	var fake := _new_secret_fake()
 	_sys.register(fake)
 	_sys.save_to_slot(SLOT)
 
-	# Decrypt with wrong password through the helper directly.
 	var out: Variant = SaveAtomicWrite.read_encrypted_json(_save_path(), "wrong-password")
 	assert_true(out == null, "wrong password should yield null, not a partial dict")
 	fake.free()
@@ -97,7 +92,7 @@ func test_load_emits_load_failed_on_corruption() -> void:
 	var cb := func(_slot, reason): fail_reason[0] = reason
 	_sys.load_failed.connect(cb)
 
-	var fake := FakeSaveable.new()
+	var fake := _new_secret_fake()
 	fake.loaded = {"hp": 999}
 	_sys.register(fake)
 

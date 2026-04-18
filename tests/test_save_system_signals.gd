@@ -10,12 +10,11 @@ const MISSING_SLOT := 942
 var _sys: Node
 
 
-class FakeSaveable:
-	extends Node
-	var save_id: String = "signal_fake"
-	var captured: Dictionary = {"v": 1}
-	func save_data() -> Dictionary: return captured.duplicate(true)
-	func load_data(_d: Dictionary) -> void: pass
+func _new_fake() -> FakeSaveable:
+	var f := FakeSaveable.new()
+	f.save_id = "signal_fake"
+	f.captured = {"v": 1}
+	return f
 
 
 func suite_name() -> String:
@@ -37,7 +36,7 @@ func suite_teardown() -> void:
 func setup() -> void:
 	_sys.delete_slot(SLOT)
 	_sys.delete_slot(MISSING_SLOT)
-	_sys._registered.clear()
+	_sys.clear_registered()
 
 
 # ----- saved -----

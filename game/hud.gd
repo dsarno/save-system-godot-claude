@@ -50,7 +50,12 @@ func _process(_delta: float) -> void:
 			name_label.add_theme_color_override("font_color", b.block_color)
 		if hp_label != null:
 			if b.alive:
-				hp_label.text = "%d / %d" % [b.hp, b.max_hp]
+				var suffix := ""
+				if b.is_player:
+					# Surface player-only stats — demonstrates that the save
+					# system preserves arbitrary fields added to Block.
+					suffix = "  J:%d W:%d" % [b.jumps, b.walls_bumped]
+				hp_label.text = "%d / %d%s" % [b.hp, b.max_hp, suffix]
 			else:
 				hp_label.text = "DEAD"
 

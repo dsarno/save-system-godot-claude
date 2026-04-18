@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://dqq4x0ho1jgwq"]
+
+[ext_resource type="Shader" uid="uid://wsdneryqqn3s" path="res://game/tron_grid.gdshader" id="1_2urvh"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_2urvh")
+shader_parameter/bg_color = Color(0.015, 0.02, 0.05, 1)
+shader_parameter/line_color = Color(0, 0.88, 1, 1)
+shader_parameter/cell_size = 1.0
+shader_parameter/line_thickness = 0.035
+shader_parameter/emission_strength = 2.2
+shader_parameter/fade_start = 6.0
+shader_parameter/fade_end = 12.0

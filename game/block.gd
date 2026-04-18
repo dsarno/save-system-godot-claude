@@ -19,6 +19,12 @@ signal died(block)
 ## the wander AI. Saved so reloads restore which block the player controls.
 @export var is_player: bool = false
 
+## Gameplay stats — demonstrate the save-system's extensibility. Both
+## persist through save/load; old saves lacking these keys default to 0
+## via load_data's `.get(key, default)` pattern.
+var jumps: int = 0
+var walls_bumped: int = 0
+
 ## Minimum relative impact speed before damage applies. Below this the blocks
 ## just bump harmlessly.
 @export var impact_threshold: float = 2.0
@@ -94,6 +100,7 @@ func _player_tick() -> void:
 		apply_central_force(force)
 	if Input.is_action_just_pressed("jump") and _is_on_ground():
 		apply_central_impulse(Vector3(0, jump_impulse, 0))
+		jumps += 1
 
 
 ## Treat the block as grounded if its Y velocity is basically zero and it's
@@ -113,6 +120,9 @@ func _pick_new_target() -> void:
 
 func _on_body_entered(other: Node) -> void:
 	if not alive:
+		return
+	if other.is_in_group("wall"):
+		walls_bumped += 1
 		return
 	if not (other is Block):
 		return
@@ -184,6 +194,8 @@ func save_data() -> Dictionary:
 		"name": block_name,
 		"alive": alive,
 		"is_player": is_player,
+		"jumps": jumps,
+		"walls_bumped": walls_bumped,
 		"pos": [global_position.x, global_position.y, global_position.z],
 		"rot": [rotation.x, rotation.y, rotation.z],
 		"lv": [linear_velocity.x, linear_velocity.y, linear_velocity.z],
@@ -200,6 +212,8 @@ func load_data(d: Dictionary) -> void:
 	block_name = String(d.get("name", ""))
 	alive = bool(d.get("alive", true))
 	is_player = bool(d.get("is_player", false))
+	jumps = int(d.get("jumps", 0))
+	walls_bumped = int(d.get("walls_bumped", 0))
 
 	var p: Array = d.get("pos", [0.0, 0.5, 0.0])
 	var r: Array = d.get("rot", [0.0, 0.0, 0.0])

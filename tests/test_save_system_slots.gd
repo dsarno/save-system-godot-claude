@@ -11,19 +11,6 @@ const S3 := 913
 var _sys: Node
 
 
-class FakeSaveable:
-	extends Node
-	var save_id: String = "slot_fake"
-	var captured: Dictionary = {}
-	var load_arg: Dictionary = {}
-
-	func save_data() -> Dictionary:
-		return captured.duplicate(true)
-
-	func load_data(d: Dictionary) -> void:
-		load_arg = d
-
-
 func suite_name() -> String:
 	return "save_system_slots"
 
@@ -41,7 +28,7 @@ func suite_teardown() -> void:
 
 func setup() -> void:
 	_wipe_all()
-	_sys._registered.clear()
+	_sys.clear_registered()
 	_sys.last_used_slot = 1
 
 
@@ -162,7 +149,7 @@ func test_quick_save_remembers_last_slot() -> void:
 	_sys.quick_save()
 	fake.captured = {}
 	_sys.quick_load()
-	assert_eq(fake.load_arg.v, 20, "quick_load should pull from last-used slot")
+	assert_eq(fake.loaded.v, 20, "quick_load should pull from last-used slot")
 	fake.free()
 
 

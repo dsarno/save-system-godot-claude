@@ -46,8 +46,14 @@ theme_override_font_sizes/font_size = 32
 text = "Save Slots"
 horizontal_alignment = 1
 
-[node name="Rows" type="VBoxContainer" parent="Panel/Margin/VBox" unique_id=1933195411]
+[node name="RowsScroll" type="ScrollContainer" parent="Panel/Margin/VBox" unique_id=282146076]
+custom_minimum_size = Vector2(0, 280)
 layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Rows" type="VBoxContainer" parent="Panel/Margin/VBox/RowsScroll" unique_id=1933195411]
+layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 

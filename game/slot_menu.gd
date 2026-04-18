@@ -8,7 +8,7 @@ signal load_requested(slot_id: int)
 
 const SLOT_IDS: Array[int] = [1, 2, 3, 4, 5]
 
-@onready var _rows: VBoxContainer = $Panel/Margin/VBox/Rows
+@onready var _rows: VBoxContainer = $Panel/Margin/VBox/RowsScroll/Rows
 @onready var _close_btn: Button = $Panel/Margin/VBox/Footer/CloseBtn
 @onready var _new_game_btn: Button = $Panel/Margin/VBox/Footer/NewGameBtn
 
