@@ -4,3 +4,6 @@
 
 # Local symlink to godot-ai plugin (dev-only, path is machine-specific)
 /addons/godot_ai
+
+# Godot-regenerated import metadata for README screenshots
+/docs/*.import

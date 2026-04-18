@@ -43,6 +43,10 @@ No external dependencies, no package manager, no build step.
 | ESC | Open / close the save-slot menu (shows career stats at the bottom) |
 | R | Respawn all blocks |
 
+<p align="center">
+  <img src="docs/saveslots.png" alt="Save slots UI — 4 slots with timestamps, play time, Save/Load/Delete per row, career stats footer" width="560">
+</p>
+
 ## Why the save system is "sophisticated"
 
 Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.open`, which breaks the moment you need more than one save, schema changes, or crash resilience. This one tries to do better without ballooning into something you'd be afraid to touch:

@@ -26,6 +26,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_left = -0.13000488
+offset_top = -174.0
+offset_right = 519.87
+offset_bottom = 266.0
 
 [node name="Margin" type="MarginContainer" parent="Panel" unique_id=1651837722]
 layout_mode = 0
