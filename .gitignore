@@ -1,0 +1,6 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local symlink to godot-ai plugin (dev-only, path is machine-specific)
+/addons/godot_ai
