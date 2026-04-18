@@ -14,17 +14,21 @@ config/name="SaveSystemGodotClaude"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+SaveSystem="*res://save_system/save_system.gd"
+
 [dotnet]
 
 project/assembly_name="SaveSystemGodotClaude"
 
-[physics]
-
-3d/physics_engine="Jolt Physics"
-
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
 
 [rendering]
 
