@@ -144,6 +144,26 @@ func save_data() -> Dictionary:
 	}
 
 
+## Pre-apply validation. Cheap structural checks — per-block validation
+## runs separately on each Block once the save system dispatches it.
+func validate_data(d: Dictionary) -> String:
+	if typeof(d) != TYPE_DICTIONARY:
+		return "expected Dictionary"
+	var n: int = int(d.get("num_blocks", 0))
+	if n < 0 or n > 64:
+		return "num_blocks %d out of sane range" % n
+	var entries = d.get("blocks", [])
+	if typeof(entries) != TYPE_ARRAY:
+		return "blocks must be an Array"
+	var winner_idx: int = int(d.get("winner_index", -1))
+	if winner_idx >= entries.size():
+		return "winner_index %d out of range" % winner_idx
+	var log = d.get("event_log", [])
+	if typeof(log) != TYPE_ARRAY:
+		return "event_log must be an Array"
+	return ""
+
+
 func load_data(d: Dictionary) -> void:
 	_clear_blocks()
 	winner = null

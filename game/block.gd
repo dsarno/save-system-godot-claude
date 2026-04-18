@@ -203,6 +203,34 @@ func save_data() -> Dictionary:
 	}
 
 
+## Return an empty string if the dict is a plausible Block state, or a
+## reason string if not. Called by save_system BEFORE any load_data fires,
+## so a rejection leaves the live world untouched.
+func validate_data(d: Dictionary) -> String:
+	if typeof(d) != TYPE_DICTIONARY:
+		return "expected Dictionary"
+	var hp_val: int = int(d.get("hp", -1))
+	var max_val: int = int(d.get("max_hp", -1))
+	if max_val <= 0:
+		return "max_hp must be positive (got %d)" % max_val
+	if hp_val < 0 or hp_val > max_val:
+		return "hp %d out of range [0, %d]" % [hp_val, max_val]
+	var pos: Array = d.get("pos", [])
+	if pos.size() != 3:
+		return "pos must be [x, y, z]"
+	for v in pos:
+		var f: float = float(v)
+		if is_nan(f) or is_inf(f):
+			return "pos has non-finite component"
+	if bool(d.get("alive", true)) and hp_val == 0:
+		return "alive=true but hp=0 (inconsistent)"
+	if int(d.get("jumps", 0)) < 0:
+		return "jumps must be non-negative"
+	if int(d.get("walls_bumped", 0)) < 0:
+		return "walls_bumped must be non-negative"
+	return ""
+
+
 func load_data(d: Dictionary) -> void:
 	hp = int(d.get("hp", max_hp))
 	max_hp = int(d.get("max_hp", 100))

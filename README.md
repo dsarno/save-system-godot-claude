@@ -57,7 +57,11 @@ Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.op
 
 - **Signals for every outcome.** `saved`, `loaded`, `load_started`, `save_failed`, `load_failed` — so HUDs, menus, or analytics can react without polling.
 
-- **34 unit tests across 6 suites** covering roundtrip, slot management, schema compatibility (forward & backward), encryption posture (wrong password → clean failure), signals, and atomic writes. Every change runs them.
+- **HMAC-SHA256 integrity signature** on every save. The JSON payload is hashed with a project-specific key and the signature is verified before any saveable sees the data. Catches tampering and corruption that slipped past encryption.
+
+- **Two-phase load with per-saveable validation.** Saveables may implement `validate_data(dict) -> String` (empty string = OK, otherwise a failure reason). The library runs every saveable's validator *before* any `load_data` fires — a single rejection aborts the whole load, so a bad save can't leave the world in a partially-applied state. Example checks in the demo: `hp > max_hp`, NaN positions, `winner_index` out of range, negative counters.
+
+- **41 unit tests across 7 suites** covering roundtrip, slot management, schema compatibility (forward & backward), encryption posture (wrong password → clean failure), signals, atomic writes, and HMAC/validation gates. Every change runs them.
 
 ### Demos of the extensibility story
 
@@ -69,15 +73,15 @@ Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.op
 
 - **The "encryption" is not real security.** The password is hardcoded in `save_config.gd`. A determined user can dump the binary and decrypt saves. It stops a player from opening the `.save` in a text editor and editing their HP to 9999 — nothing more. For real security you'd derive a key from the user's OS account or a server.
 
-- **No migration layer yet.** `SaveSystem._migrate()` is a stub. The hooks are there (schema_version gate, `_migrate` function) but no versioned transformations have been written. The first `schema_version: 2` save will need that filled in.
+- **Still no migration code written.** `SaveSystem._migrate()` is a stub. The infrastructure (envelope-level `schema_version`, inner-payload `_migrate` function) is in place, but the first real migration transform (e.g. v2 → v3) hasn't been needed yet.
+
+- **HMAC key lives next to the encryption key.** Both are constants in `save_config.gd`, so the integrity signature is only as strong as the binary's secrecy. A defender who can extract one secret gets the other. Still catches casual tampering, random corruption, and bit-flips — it doesn't resist an attacker who has reverse-engineered the game.
 
 - **No thumbnails.** `SaveSlotMeta.thumbnail` is a field but the game never populates it. Slot pickers could show the last viewport frame; that plumbing isn't built.
 
 - **No async / threaded saves.** Everything runs on the main thread. Fine for this demo (a few kilobytes), annoying for a hundred-MB open-world save.
 
 - **No cloud / sync.** No Steam Cloud, no iCloud, no custom server. Saves live in `user://saves/` on the local machine.
-
-- **No save validation beyond schema_version.** A load doesn't verify internal consistency — if a hand-edited save puts HP > max_hp, the game will happily load it. A checksum or per-saveable validation pass would catch corruption earlier.
 
 - **Group-based discovery has a race.** If a node emits `add_to_group("saveable")` during a save's `_collect_saveables` iteration, behavior is undefined. In practice saveable membership is set up in `_ready` long before saves happen, so it hasn't bit us — but the guarantee isn't formal.
 

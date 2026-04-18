@@ -48,10 +48,14 @@ func clear_registered() -> void:
 
 
 ## Save the current state of all saveables to the given slot.
+##
+## File format (decrypted): {"schema_version": 2, "hmac": "<hex>",
+## "body": "<json string of inner payload>"}. The body is JSON-stringified
+## before hashing so the HMAC is computed over the exact bytes that land
+## on disk — no dictionary-ordering drift.
 func save_to_slot(slot_id: int, level_name: String = "", play_time_seconds: float = 0.0) -> Error:
 	_ensure_saves_dir()
-	var payload: Dictionary = {
-		"schema_version": SaveConfig.SCHEMA_VERSION,
+	var inner: Dictionary = {
 		"game_version": SaveConfig.GAME_VERSION,
 		"saved_at_unix": int(Time.get_unix_time_from_system()),
 		"play_time_seconds": play_time_seconds,
@@ -62,10 +66,17 @@ func save_to_slot(slot_id: int, level_name: String = "", play_time_seconds: floa
 		if not _has_method(node, "save_data"):
 			continue
 		var sid := _saveable_id(node)
-		payload.saveables[sid] = node.call("save_data")
+		inner.saveables[sid] = node.call("save_data")
+
+	var body_json: String = JSON.stringify(inner)
+	var envelope: Dictionary = {
+		"schema_version": SaveConfig.SCHEMA_VERSION,
+		"hmac": _compute_hmac(body_json),
+		"body": body_json,
+	}
 
 	var save_path := _slot_save_path(slot_id)
-	var err := SaveAtomicWrite.write_encrypted_json(save_path, payload, SaveConfig.ENCRYPTION_PASSWORD)
+	var err := SaveAtomicWrite.write_encrypted_json(save_path, envelope, SaveConfig.ENCRYPTION_PASSWORD)
 	if err != OK:
 		save_failed.emit(slot_id, "write failed: " + error_string(err))
 		return err
@@ -73,7 +84,7 @@ func save_to_slot(slot_id: int, level_name: String = "", play_time_seconds: floa
 	var meta := SaveSlotMeta.new()
 	meta.slot_id = slot_id
 	meta.display_name = "Slot %d" % slot_id
-	meta.saved_at_unix = payload.saved_at_unix
+	meta.saved_at_unix = inner.saved_at_unix
 	meta.play_time_seconds = play_time_seconds
 	meta.level_name = level_name
 	meta.game_version = SaveConfig.GAME_VERSION
@@ -88,26 +99,64 @@ func save_to_slot(slot_id: int, level_name: String = "", play_time_seconds: floa
 
 
 ## Load the slot and apply it to all matching saveables.
+##
+## Two integrity gates run before any saveable sees the data:
+##   1. HMAC over the body JSON must match (detects tampering / corruption
+##      that slipped through encryption).
+##   2. Every saveable with a `validate_data(dict) -> String` method runs
+##      first; if any returns a non-empty reason, load aborts *before* any
+##      `load_data` is called so the in-memory world stays consistent.
 func load_from_slot(slot_id: int) -> Error:
 	var save_path := _slot_save_path(slot_id)
 	if not FileAccess.file_exists(save_path):
 		load_failed.emit(slot_id, "no save at slot %d" % slot_id)
 		return ERR_FILE_NOT_FOUND
 	load_started.emit(slot_id)
-	var data: Variant = SaveAtomicWrite.read_encrypted_json(save_path, SaveConfig.ENCRYPTION_PASSWORD)
-	if data == null or typeof(data) != TYPE_DICTIONARY:
+	var envelope: Variant = SaveAtomicWrite.read_encrypted_json(save_path, SaveConfig.ENCRYPTION_PASSWORD)
+	if envelope == null or typeof(envelope) != TYPE_DICTIONARY:
 		load_failed.emit(slot_id, "decrypt or parse failed")
 		return ERR_PARSE_ERROR
 
-	var ver: int = int((data as Dictionary).get("schema_version", 0))
+	var env_dict: Dictionary = envelope
+	var ver: int = int(env_dict.get("schema_version", 0))
 	if ver <= 0 or ver > SaveConfig.SCHEMA_VERSION:
 		load_failed.emit(slot_id, "unsupported schema_version: %d" % ver)
 		return ERR_INVALID_DATA
 
-	data = _migrate(data)
+	# Verify HMAC before trusting the body.
+	var body_json: String = String(env_dict.get("body", ""))
+	var stored_hmac: String = String(env_dict.get("hmac", ""))
+	if body_json == "" or stored_hmac == "":
+		load_failed.emit(slot_id, "malformed envelope (missing body or hmac)")
+		return ERR_INVALID_DATA
+	if _compute_hmac(body_json) != stored_hmac:
+		load_failed.emit(slot_id, "hmac mismatch — save may be tampered or corrupted")
+		return ERR_INVALID_DATA
 
-	var saveables_data: Dictionary = (data as Dictionary).get("saveables", {})
-	for node in _collect_saveables():
+	var inner_parsed: Variant = JSON.parse_string(body_json)
+	if typeof(inner_parsed) != TYPE_DICTIONARY:
+		load_failed.emit(slot_id, "body JSON parse failed")
+		return ERR_PARSE_ERROR
+	var inner: Dictionary = _migrate(inner_parsed)
+
+	var saveables_data: Dictionary = inner.get("saveables", {})
+	var saveables := _collect_saveables()
+
+	# Validation pass — before applying anything. A single failure aborts
+	# the whole load so partial application can't leave a broken world.
+	for node in saveables:
+		if not _has_method(node, "validate_data"):
+			continue
+		var sid := _saveable_id(node)
+		if not saveables_data.has(sid):
+			continue
+		var reason: String = String(node.call("validate_data", saveables_data[sid]))
+		if reason != "":
+			load_failed.emit(slot_id, "validation failed for '%s': %s" % [sid, reason])
+			return ERR_INVALID_DATA
+
+	# Apply pass.
+	for node in saveables:
 		if not _has_method(node, "load_data"):
 			continue
 		var sid := _saveable_id(node)
@@ -217,5 +266,16 @@ func _slot_meta_path(slot_id: int) -> String:
 
 
 func _migrate(data: Dictionary) -> Dictionary:
-	# Schema migrations live here when v2+ arrives. For now we only accept v1.
+	# Inner payload migrations go here when v3+ arrives. v2 carries no
+	# migration debt yet — the envelope change alone bumped the version.
 	return data
+
+
+func _compute_hmac(body: String) -> String:
+	var crypto := Crypto.new()
+	var digest := crypto.hmac_digest(
+		HashingContext.HASH_SHA256,
+		SaveConfig.HMAC_KEY.to_utf8_buffer(),
+		body.to_utf8_buffer(),
+	)
+	return digest.hex_encode()

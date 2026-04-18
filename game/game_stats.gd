@@ -39,6 +39,15 @@ func save_data() -> Dictionary:
 	}
 
 
+func validate_data(d: Dictionary) -> String:
+	if typeof(d) != TYPE_DICTIONARY:
+		return "expected Dictionary"
+	for key in ["games_played", "wins", "total_jumps", "total_walls_bumped"]:
+		if int(d.get(key, 0)) < 0:
+			return "%s must be non-negative" % key
+	return ""
+
+
 func load_data(d: Dictionary) -> void:
 	games_played = int(d.get("games_played", 0))
 	wins = int(d.get("wins", 0))
