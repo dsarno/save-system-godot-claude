@@ -35,20 +35,47 @@ offset_bottom = 24.0
 grow_horizontal = 0
 theme_override_constants/separation = 6
 
-[node name="WinnerLabel" type="Label" parent="." unique_id=29366942]
+[node name="WinnerPanel" type="Panel" parent="." unique_id=1470888035]
 visible = false
+custom_minimum_size = Vector2(420, 180)
 layout_mode = 0
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -11.5
-offset_right = 64.0
-offset_bottom = 11.5
-theme_override_colors/font_color = Color(1, 1, 0.4, 1)
+
+[node name="Margin" type="MarginContainer" parent="WinnerPanel" unique_id=176093605]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="WinnerPanel/Margin" unique_id=2021788535]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Title" type="Label" parent="WinnerPanel/Margin/VBox" unique_id=1122835190]
+layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 64
-text = "WINNER: Block 1"
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 52
+text = "VICTORY"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="WinnerPanel/Margin/VBox" unique_id=1722367361]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6509804, 0.6862745, 0.8509804, 1)
+theme_override_font_sizes/font_size = 22
+text = "Block 1 (YOU)"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="WinnerPanel/Margin/VBox" unique_id=298996199]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.41568628, 0.4392157, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "press R to play again   •   ESC for save menu"
 horizontal_alignment = 1

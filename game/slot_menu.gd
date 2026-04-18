@@ -11,6 +11,7 @@ const SLOT_IDS: Array[int] = [1, 2, 3, 4, 5]
 @onready var _rows: VBoxContainer = $Panel/Margin/VBox/RowsScroll/Rows
 @onready var _close_btn: Button = $Panel/Margin/VBox/Footer/CloseBtn
 @onready var _new_game_btn: Button = $Panel/Margin/VBox/Footer/NewGameBtn
+@onready var _career_label: Label = $Panel/Margin/VBox/CareerStats
 
 
 func _ready() -> void:
@@ -60,6 +61,12 @@ func _rebuild() -> void:
 		metas[int(meta.slot_id)] = meta
 	for slot_id in SLOT_IDS:
 		_rows.add_child(_build_row(slot_id, metas.get(slot_id, null)))
+	_career_label.text = "Career:  %d played   \u00b7   %d wins   \u00b7   %d jumps   \u00b7   %d wall bumps" % [
+		GameStats.games_played,
+		GameStats.wins,
+		GameStats.total_jumps,
+		GameStats.total_walls_bumped,
+	]
 
 
 func _build_row(slot_id: int, meta) -> Control:

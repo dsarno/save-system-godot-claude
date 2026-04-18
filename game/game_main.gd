@@ -13,6 +13,19 @@ func _ready() -> void:
 	_slot_menu.new_game_requested.connect(_on_new_game)
 	_slot_menu.load_requested.connect(_on_load_requested)
 	SaveSystem.loaded.connect(_on_slot_loaded)
+	_arena.winner_determined.connect(_on_winner_determined)
+
+
+func _on_winner_determined(winner_block) -> void:
+	var player = _find_player_block()
+	GameStats.record_game_end(winner_block, player)
+
+
+func _find_player_block() -> Node:
+	for b in _arena.blocks:
+		if is_instance_valid(b) and b.is_player:
+			return b
+	return null
 
 
 func _unhandled_input(event: InputEvent) -> void:

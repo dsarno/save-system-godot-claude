@@ -8,7 +8,9 @@ extends Control
 
 @onready var _time_label: Label = $TimeLabel
 @onready var _block_stats: VBoxContainer = $BlockStats
-@onready var _winner_label: Label = $WinnerLabel
+@onready var _winner_panel: Panel = $WinnerPanel
+@onready var _winner_title: Label = $WinnerPanel/Margin/VBox/Title
+@onready var _winner_subtitle: Label = $WinnerPanel/Margin/VBox/Subtitle
 
 var _arena: Node = null
 var _row_by_block: Dictionary = {}
@@ -27,7 +29,7 @@ func bind_arena(arena: Node) -> void:
 		_arena.winner_determined.connect(_on_winner)
 		_arena.game_reset.connect(_on_game_reset)
 	_rebuild_rows()
-	_winner_label.visible = false
+	_winner_panel.visible = false
 
 
 func _process(_delta: float) -> void:
@@ -40,11 +42,11 @@ func _process(_delta: float) -> void:
 	for b in _arena.blocks:
 		if not is_instance_valid(b):
 			continue
-		var row: HBoxContainer = _row_by_block.get(b, null)
+		var row = _row_by_block.get(b, null)
 		if row == null:
 			continue
-		var name_label: Label = row.get_node_or_null("Name")
-		var hp_label: Label = row.get_node_or_null("Hp")
+		var name_label: Label = row.find_child("Name", true, false)
+		var hp_label: Label = row.find_child("Hp", true, false)
 		if name_label != null:
 			name_label.text = b.block_name
 			name_label.add_theme_color_override("font_color", b.block_color)
@@ -61,17 +63,19 @@ func _process(_delta: float) -> void:
 
 
 func _on_winner(block) -> void:
-	_winner_label.visible = true
+	_winner_panel.visible = true
 	if block == null:
-		_winner_label.text = "DRAW"
-		_winner_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+		_winner_title.text = "DRAW"
+		_winner_title.add_theme_color_override("font_color", Color(0.88, 0.88, 0.88))
+		_winner_subtitle.text = "no survivors"
 	else:
-		_winner_label.text = "WINNER: %s" % block.block_name
-		_winner_label.add_theme_color_override("font_color", block.block_color)
+		_winner_title.text = "VICTORY" if block.is_player else "KO"
+		_winner_title.add_theme_color_override("font_color", block.block_color)
+		_winner_subtitle.text = block.block_name
 
 
 func _on_game_reset() -> void:
-	_winner_label.visible = false
+	_winner_panel.visible = false
 	_rebuild_rows()
 
 
@@ -82,28 +86,67 @@ func _rebuild_rows() -> void:
 	if _arena == null:
 		return
 	for b in _arena.blocks:
-		if not is_instance_valid(b):
-			continue
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		var name_label := Label.new()
-		name_label.name = "Name"
-		name_label.text = b.block_name
-		name_label.add_theme_color_override("font_color", b.block_color)
-		name_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		name_label.add_theme_constant_override("outline_size", 4)
-		name_label.add_theme_font_size_override("font_size", 22)
-		var hp_label := Label.new()
-		hp_label.name = "Hp"
-		hp_label.text = "%d / %d" % [b.hp, b.max_hp]
-		hp_label.add_theme_color_override("font_color", Color(1, 1, 1))
-		hp_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		hp_label.add_theme_constant_override("outline_size", 4)
-		hp_label.add_theme_font_size_override("font_size", 22)
-		row.add_child(name_label)
-		row.add_child(hp_label)
-		_block_stats.add_child(row)
-		_row_by_block[b] = row
+		if is_instance_valid(b):
+			var row := _build_row(b)
+			_block_stats.add_child(row)
+			_row_by_block[b] = row
+
+
+## One row per block: PanelContainer with subtle card styling, inside an
+## HBoxContainer holding a colored Name label + white HP label. The Hp
+## label is looked up by name from _process to avoid holding extra refs.
+func _build_row(b: Node) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _row_stylebox(b.block_color))
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_bottom", 4)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+
+	row.add_child(_styled_label("Name", b.block_name, b.block_color, 20, true))
+	row.add_child(_styled_label("Hp", "%d / %d" % [b.hp, b.max_hp], Color(1, 1, 1), 20, false))
+
+	margin.add_child(row)
+	panel.add_child(margin)
+	return panel
+
+
+func _styled_label(node_name: String, text: String, color: Color, size: int, bold: bool) -> Label:
+	var label := Label.new()
+	label.name = node_name
+	label.text = text
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.add_theme_font_size_override("font_size", size)
+	if bold:
+		# Fake bold via slight shadow offset — real bold requires a bold
+		# font resource the project doesn't ship. Outline already gives weight.
+		label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+		label.add_theme_constant_override("shadow_offset_x", 1)
+		label.add_theme_constant_override("shadow_offset_y", 1)
+	return label
+
+
+func _row_stylebox(block_color: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.07, 0.14, 0.55)
+	sb.border_color = block_color
+	sb.border_width_left = 3
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+	return sb
 
 
 func _format_time(seconds: float) -> String:

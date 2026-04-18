@@ -31,6 +31,11 @@ var save_id: String = "arena"
 var blocks: Array[Block] = []
 var elapsed_seconds: float = 0.0
 var winner: Block = null
+## Running log of gameplay events (spawn, death, winner). Persists through
+## save/load as an array-of-dicts — demonstrates structured collection saves.
+## Capped at 50 entries to avoid unbounded growth across many matches.
+var event_log: Array = []
+const EVENT_LOG_MAX := 50
 
 var _block_scene: PackedScene
 
@@ -53,10 +58,23 @@ func spawn_new_game() -> void:
 	_clear_blocks()
 	winner = null
 	elapsed_seconds = 0.0
+	event_log.clear()
 	for i in range(num_blocks):
 		var b := _spawn_block(i)
 		blocks.append(b)
+	_log_event("start")
 	game_reset.emit()
+
+
+## Append a structured event to the log. Persisted as array-of-dicts so the
+## save system preserves the full history.
+func _log_event(kind: String, block: Node = null) -> void:
+	var entry: Dictionary = {"t": roundf(elapsed_seconds * 10.0) / 10.0, "kind": kind}
+	if block != null:
+		entry["block"] = String(block.block_name)
+	event_log.append(entry)
+	if event_log.size() > EVENT_LOG_MAX:
+		event_log = event_log.slice(event_log.size() - EVENT_LOG_MAX)
 
 
 func alive_blocks() -> Array:
@@ -88,20 +106,20 @@ func _clear_blocks() -> void:
 	blocks.clear()
 
 
-func _on_block_died(_block) -> void:
-	# Actual winner resolution happens in _process so death-frame ordering
-	# doesn't affect the outcome.
-	pass
+func _on_block_died(block) -> void:
+	_log_event("death", block)
 
 
 func _check_winner() -> void:
 	var alive: Array = alive_blocks()
 	if alive.size() == 1 and blocks.size() > 1:
 		winner = alive[0]
+		_log_event("win", winner)
 		winner_determined.emit(winner)
 	elif alive.size() == 0 and blocks.size() > 0:
 		winner = null
-		winner_determined.emit(null)  # draw
+		_log_event("draw")
+		winner_determined.emit(null)
 
 
 # -- Saveable contract --------------------------------------------------------
@@ -122,6 +140,7 @@ func save_data() -> Dictionary:
 		"num_blocks": num_blocks,
 		"blocks": entries,
 		"winner_index": winner_idx,
+		"event_log": event_log.duplicate(true),
 	}
 
 
@@ -130,6 +149,7 @@ func load_data(d: Dictionary) -> void:
 	winner = null
 	elapsed_seconds = float(d.get("elapsed_seconds", 0.0))
 	num_blocks = int(d.get("num_blocks", num_blocks))
+	event_log = d.get("event_log", []).duplicate(true)
 
 	var entries: Array = d.get("blocks", [])
 	for entry in entries:
