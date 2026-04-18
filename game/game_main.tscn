@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://b3auh522dpd25"]
+
+[ext_resource type="PackedScene" uid="uid://blro6ofnxkrcv" path="res://game/arena.tscn" id="1_b7flu"]
+[ext_resource type="Script" uid="uid://dqkdmwxhdifpw" path="res://game/game_main.gd" id="1_msxjj"]
+[ext_resource type="PackedScene" uid="uid://pfr6enhyfoxv" path="res://game/hud.tscn" id="2_msxjj"]
+[ext_resource type="PackedScene" uid="uid://d1yvp1ffyt5y3" path="res://game/slot_menu.tscn" id="3_w0466"]
+
+[node name="GameMain" type="Node" unique_id=1481282364]
+script = ExtResource("1_msxjj")
+
+[node name="Arena" parent="." unique_id=89295594 instance=ExtResource("1_b7flu")]
+
+[node name="UiLayer" type="CanvasLayer" parent="." unique_id=1096186675]
+
+[node name="Hud" parent="UiLayer" unique_id=1938183891 instance=ExtResource("2_msxjj")]
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SlotMenu" parent="UiLayer" unique_id=1323212751 instance=ExtResource("3_w0466")]
+grow_horizontal = 2
+grow_vertical = 2

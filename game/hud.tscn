@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://pfr6enhyfoxv"]
+
+[ext_resource type="Script" uid="uid://wk8mfbbtsi77" path="res://game/hud.gd" id="1_d8ggh"]
+
+[node name="Hud" type="Control" unique_id=1938183891]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1_d8ggh")
+
+[node name="TimeLabel" type="Label" parent="." unique_id=1686275577]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 66.0
+offset_bottom = 47.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 28
+text = "00:00"
+
+[node name="BlockStats" type="VBoxContainer" parent="." unique_id=1094913575]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 24.0
+grow_horizontal = 0
+theme_override_constants/separation = 6
+
+[node name="WinnerLabel" type="Label" parent="." unique_id=29366942]
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -11.5
+offset_right = 64.0
+offset_bottom = 11.5
+theme_override_colors/font_color = Color(1, 1, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 64
+text = "WINNER: Block 1"
+horizontal_alignment = 1

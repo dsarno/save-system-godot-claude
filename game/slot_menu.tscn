@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://d1yvp1ffyt5y3"]
+
+[ext_resource type="Script" uid="uid://cp0tr3iukj3pa" path="res://game/slot_menu.gd" id="1_4gs2t"]
+
+[node name="SlotMenu" type="Control" unique_id=1323212751]
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_4gs2t")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=2017434419]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.6666667)
+
+[node name="Panel" type="Panel" parent="." unique_id=260134646]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+
+[node name="Margin" type="MarginContainer" parent="Panel" unique_id=1651837722]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin" unique_id=1766775545]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox" unique_id=883102731]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Save Slots"
+horizontal_alignment = 1
+
+[node name="Rows" type="VBoxContainer" parent="Panel/Margin/VBox" unique_id=1933195411]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="Footer" type="HBoxContainer" parent="Panel/Margin/VBox" unique_id=1220088487]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="NewGameBtn" type="Button" parent="Panel/Margin/VBox/Footer" unique_id=209216694]
+layout_mode = 2
+text = "New Game"
+
+[node name="CloseBtn" type="Button" parent="Panel/Margin/VBox/Footer" unique_id=233804807]
+layout_mode = 2
+text = "Close"
