@@ -44,6 +44,7 @@ var alive: bool = true
 var _wander_target: Vector3 = Vector3.ZERO
 var _wander_timer: float = 0.0
 var _material: StandardMaterial3D = null
+var _pulse_time: float = 0.0
 
 @onready var _mesh: MeshInstance3D = $Mesh
 
@@ -55,6 +56,16 @@ func _ready() -> void:
 	_ensure_material()
 	_apply_hp_tint()
 	_pick_new_target()
+
+
+func _process(delta: float) -> void:
+	# Pulsing emission glow on the player block so it's visually unmistakable
+	# among the AI crowd. ~1.4 Hz, oscillating between dim and bright.
+	if not is_player or not alive or _material == null:
+		return
+	_pulse_time += delta
+	var phase: float = (sin(_pulse_time * TAU * 1.4) + 1.0) * 0.5  # 0..1
+	_material.emission_energy_multiplier = lerp(0.4, 2.2, phase)
 
 
 func _physics_process(delta: float) -> void:
@@ -132,6 +143,8 @@ func _die() -> void:
 	alive = false
 	freeze = true
 	died.emit(self)
+	if _material != null:
+		_material.emission_enabled = false
 	if _mesh != null:
 		var tween := create_tween()
 		tween.tween_property(_mesh, "transparency", 1.0, 0.6)
@@ -146,6 +159,10 @@ func _ensure_material() -> void:
 	else:
 		_material = _mesh.material_override
 	_material.albedo_color = block_color
+	_material.emission_enabled = is_player
+	if is_player:
+		_material.emission = block_color
+		_material.emission_energy_multiplier = 0.5
 
 
 func _apply_hp_tint() -> void:
