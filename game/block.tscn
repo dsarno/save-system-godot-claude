@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://dn5wjxbhmi1u5"]
 
+[ext_resource type="PhysicsMaterial" uid="uid://b02vyclcmlsv4" path="res://game/slick.tres" id="1_bux31"]
 [ext_resource type="Script" uid="uid://c0uep4opyloic" path="res://game/block.gd" id="1_d5x6n"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_bux31"]
@@ -7,6 +8,7 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_8df8g"]
 
 [node name="Block" type="RigidBody3D" unique_id=1194492106]
+physics_material_override = ExtResource("1_bux31")
 script = ExtResource("1_d5x6n")
 
 [node name="Mesh" type="MeshInstance3D" parent="." unique_id=1721589891]

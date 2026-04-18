@@ -15,6 +15,9 @@ signal died(block)
 @export var max_hp: int = 100
 @export var block_color: Color = Color.WHITE
 @export var block_name: String = ""
+## When true, this block is driven by player input (WASD + Space) instead of
+## the wander AI. Saved so reloads restore which block the player controls.
+@export var is_player: bool = false
 
 ## Minimum relative impact speed before damage applies. Below this the blocks
 ## just bump harmlessly.
@@ -22,12 +25,19 @@ signal died(block)
 ## Damage per unit of impact speed above the threshold.
 @export var damage_per_impact_unit: float = 10.0
 ## Force applied toward the current wander target each physics step.
-@export var steer_force: float = 4.0
+@export var steer_force: float = 14.0
 ## Interval between picking new wander targets.
 @export var wander_interval: float = 2.5
 ## Half-size of the wander region (square around origin). Keeps targets
 ## comfortably inside a 20×20 arena.
 @export var wander_half_extent: float = 8.0
+## Force multiplier applied to the WASD vector for the player block.
+## Higher than steer_force so input feels responsive against the AI jostling.
+@export var player_move_force: float = 28.0
+## Upward impulse applied on jump. Scaled roughly for mass=1.
+@export var jump_impulse: float = 7.0
+## How close to the floor we must be to re-jump. Small epsilon for physics jitter.
+@export var ground_epsilon: float = 0.12
 
 var alive: bool = true
 
@@ -50,6 +60,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if not alive:
 		return
+	if is_player:
+		_player_tick()
+		return
 	_wander_timer -= delta
 	if _wander_timer <= 0.0:
 		_pick_new_target()
@@ -58,6 +71,24 @@ func _physics_process(delta: float) -> void:
 	if to_target.length_squared() < 0.04:
 		return
 	apply_central_force(to_target.normalized() * steer_force)
+
+
+## Player-control tick — WASD nudges a horizontal force, Space triggers an
+## upward impulse when the block is close to the floor. Camera is fixed on
+## +Z looking down, so "forward" (W) is -Z (away from camera).
+func _player_tick() -> void:
+	var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if input_vec != Vector2.ZERO:
+		var force := Vector3(input_vec.x, 0.0, input_vec.y) * player_move_force
+		apply_central_force(force)
+	if Input.is_action_just_pressed("jump") and _is_on_ground():
+		apply_central_impulse(Vector3(0, jump_impulse, 0))
+
+
+## Treat the block as grounded if its Y velocity is basically zero and it's
+## low to the floor. Simple heuristic — no raycast needed for a box on a plane.
+func _is_on_ground() -> bool:
+	return absf(linear_velocity.y) < 0.6 and global_position.y < 0.6 + ground_epsilon
 
 
 func _pick_new_target() -> void:
@@ -135,6 +166,7 @@ func save_data() -> Dictionary:
 		"color": [block_color.r, block_color.g, block_color.b, block_color.a],
 		"name": block_name,
 		"alive": alive,
+		"is_player": is_player,
 		"pos": [global_position.x, global_position.y, global_position.z],
 		"rot": [rotation.x, rotation.y, rotation.z],
 		"lv": [linear_velocity.x, linear_velocity.y, linear_velocity.z],
@@ -150,6 +182,7 @@ func load_data(d: Dictionary) -> void:
 	block_color = Color(float(c[0]), float(c[1]), float(c[2]), alpha)
 	block_name = String(d.get("name", ""))
 	alive = bool(d.get("alive", true))
+	is_player = bool(d.get("is_player", false))
 
 	var p: Array = d.get("pos", [0.0, 0.5, 0.0])
 	var r: Array = d.get("rot", [0.0, 0.0, 0.0])

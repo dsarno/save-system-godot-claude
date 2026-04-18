@@ -68,10 +68,11 @@ func _spawn_block(index: int) -> Block:
 	# Set @export properties BEFORE add_child so Block._ready sees the final
 	# values when it builds its material. If we set them after, _ready has
 	# already baked a material with the default (white) block_color.
-	b.block_name = "Block %d" % (index + 1)
+	b.block_name = "Block %d" % (index + 1) + (" (YOU)" if index == 0 else "")
 	b.block_color = block_colors[index % block_colors.size()]
 	b.max_hp = 100
 	b.hp = b.max_hp
+	b.is_player = (index == 0)
 	$Blocks.add_child(b)
 	var angle := (float(index) / float(num_blocks)) * TAU
 	b.global_position = Vector3(cos(angle) * spawn_radius, 0.6, sin(angle) * spawn_radius)

@@ -21,6 +21,15 @@ func _ready() -> void:
 	_rebuild()
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	# SlotMenu runs in PROCESS_MODE_ALWAYS so it still receives input while
+	# the tree is paused. GameMain's ESC handler only fires when unpaused —
+	# once the menu is open we own the toggle.
+	if visible and event.is_action_pressed("toggle_menu"):
+		close()
+		get_viewport().set_input_as_handled()
+
+
 func open() -> void:
 	visible = true
 	_rebuild()

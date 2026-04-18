@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://blro6ofnxkrcv"]
 
 [ext_resource type="Script" uid="uid://23fa1dl5m40e" path="res://game/arena.gd" id="1_lqfih"]
+[ext_resource type="PhysicsMaterial" uid="uid://b02vyclcmlsv4" path="res://game/slick.tres" id="2_l8ka0"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_l8ka0"]
 size = Vector3(20, 0.2, 20)
@@ -32,6 +33,7 @@ current = true
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=244960688]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+physics_material_override = ExtResource("2_l8ka0")
 
 [node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=400711950]
 mesh = SubResource("BoxMesh_l8ka0")

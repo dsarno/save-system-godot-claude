@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://pfr6enhyfoxv"]
 
+[ext_resource type="Theme" uid="uid://dhmh6yv4i2dg0" path="res://game/ui_theme.tres" id="1_448qv"]
 [ext_resource type="Script" uid="uid://wk8mfbbtsi77" path="res://game/hud.gd" id="1_d8ggh"]
 
 [node name="Hud" type="Control" unique_id=1938183891]
@@ -8,6 +9,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
+theme = ExtResource("1_448qv")
 script = ExtResource("1_d8ggh")
 
 [node name="TimeLabel" type="Label" parent="." unique_id=1686275577]
