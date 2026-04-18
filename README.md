@@ -2,11 +2,41 @@
 
 A drop-in save system for Godot 4, plus a small 3D demo that exercises it.
 
+This project demonstrates a production-minded save architecture: encrypted slot files with metadata sidecars, atomic write + backup rotation, schema-versioned payloads, HMAC integrity verification, and two-phase validation before any world state is applied. It is designed to stay easy to integrate while still handling real-world failure modes and evolution over time.
+
 <p align="center">
   <img src="docs/blocks.png" alt="Blocks demo — Tron-style arena, four colored cubes, styled HUD" width="520">
 </p>
 
+<p align="center">
+  <img src="docs/saveslots.png" alt="Save slots UI — 4 slots with timestamps, play time, Save/Load/Delete per row, career stats footer" width="560">
+</p>
+
 Four cubes wander a neon-grid arena, bump each other, and lose HP on impact. You control one of them with **WASD + Space**. Whoever's left standing wins. Save/load at any moment via F5/F9 or the ESC slot menu — positions, velocities, HP, kill/jump counts, the player designation, career totals across sessions, and the event log all restore exactly.
+
+## Why the save system is "sophisticated"
+
+Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.open`, which breaks the moment you need more than one save, schema changes, or crash resilience. This one tries to do better without ballooning into something you'd be afraid to touch:
+
+- **Decoupled library.** `save_system/` has zero dependencies on the game. Drop the folder into any Godot 4 project, register one autoload, done. No base classes to inherit; any node in group `saveable` that implements `save_data()` / `load_data()` participates.
+
+- **Atomic writes, won't half-save.** Writes go to `<slot>.save.tmp`, then `rename()` into place, with a `.backup` rotation in between. A crash mid-save leaves you with either the old file or the new one — never a torn byte stream.
+
+- **Encrypted on disk, readable after decrypt.** Save payload is JSON wrapped in `FileAccess.open_encrypted_with_pass`. Deters casual save-editing, but when debugging you can run a one-liner with the project password and get readable JSON back.
+
+- **Separate metadata sidecar.** Each slot has a `.save` (encrypted) and a `.meta.tres` (plain Godot Resource). The slot picker reads sidecars — no decryption — so listing 100 slots with timestamps, play-time, and level names is cheap.
+
+- **Schema versioning at two levels.** A top-level `schema_version` lets the library reject or migrate saves from the future. Individual saveables evolve independently by reading every field with `.get(key, default)` — add a new field tomorrow, old saves still load.
+
+- **Collections through ownership, not magic.** Instead of a "saveable collection" concept with special cases, dynamic entities (like the spawned blocks) are owned by a saveable controller (Arena) that serializes them in its own `save_data`. The library stays unaware of collection semantics; the pattern scales to any kind of spawned entity.
+
+- **Signals for every outcome.** `saved`, `loaded`, `load_started`, `save_failed`, `load_failed` — so HUDs, menus, or analytics can react without polling.
+
+- **HMAC-SHA256 integrity signature** on every save. The JSON payload is hashed with a project-specific key and the signature is verified before any saveable sees the data. Catches tampering and corruption that slipped past encryption.
+
+- **Two-phase load with per-saveable validation.** Saveables may implement `validate_data(dict) -> String` (empty string = OK, otherwise a failure reason). The library runs every saveable's validator *before* any `load_data` fires — a single rejection aborts the whole load, so a bad save can't leave the world in a partially-applied state. Example checks in the demo: `hp > max_hp`, NaN positions, `winner_index` out of range, negative counters.
+
+- **41 unit tests across 7 suites** covering roundtrip, slot management, schema compatibility (forward & backward), encryption posture (wrong password → clean failure), signals, atomic writes, and HMAC/validation gates. Every change runs them.
 
 ## How to run
 
@@ -42,34 +72,6 @@ No external dependencies, no package manager, no build step.
 | F9 | Quick-load from the last-used slot |
 | ESC | Open / close the save-slot menu (shows career stats at the bottom) |
 | R | Respawn all blocks |
-
-<p align="center">
-  <img src="docs/saveslots.png" alt="Save slots UI — 4 slots with timestamps, play time, Save/Load/Delete per row, career stats footer" width="560">
-</p>
-
-## Why the save system is "sophisticated"
-
-Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.open`, which breaks the moment you need more than one save, schema changes, or crash resilience. This one tries to do better without ballooning into something you'd be afraid to touch:
-
-- **Decoupled library.** `save_system/` has zero dependencies on the game. Drop the folder into any Godot 4 project, register one autoload, done. No base classes to inherit; any node in group `saveable` that implements `save_data()` / `load_data()` participates.
-
-- **Atomic writes, won't half-save.** Writes go to `<slot>.save.tmp`, then `rename()` into place, with a `.backup` rotation in between. A crash mid-save leaves you with either the old file or the new one — never a torn byte stream.
-
-- **Encrypted on disk, readable after decrypt.** Save payload is JSON wrapped in `FileAccess.open_encrypted_with_pass`. Deters casual save-editing, but when debugging you can run a one-liner with the project password and get readable JSON back.
-
-- **Separate metadata sidecar.** Each slot has a `.save` (encrypted) and a `.meta.tres` (plain Godot Resource). The slot picker reads sidecars — no decryption — so listing 100 slots with timestamps, play-time, and level names is cheap.
-
-- **Schema versioning at two levels.** A top-level `schema_version` lets the library reject or migrate saves from the future. Individual saveables evolve independently by reading every field with `.get(key, default)` — add a new field tomorrow, old saves still load.
-
-- **Collections through ownership, not magic.** Instead of a "saveable collection" concept with special cases, dynamic entities (like the spawned blocks) are owned by a saveable controller (Arena) that serializes them in its own `save_data`. The library stays unaware of collection semantics; the pattern scales to any kind of spawned entity.
-
-- **Signals for every outcome.** `saved`, `loaded`, `load_started`, `save_failed`, `load_failed` — so HUDs, menus, or analytics can react without polling.
-
-- **HMAC-SHA256 integrity signature** on every save. The JSON payload is hashed with a project-specific key and the signature is verified before any saveable sees the data. Catches tampering and corruption that slipped past encryption.
-
-- **Two-phase load with per-saveable validation.** Saveables may implement `validate_data(dict) -> String` (empty string = OK, otherwise a failure reason). The library runs every saveable's validator *before* any `load_data` fires — a single rejection aborts the whole load, so a bad save can't leave the world in a partially-applied state. Example checks in the demo: `hp > max_hp`, NaN positions, `winner_index` out of range, negative counters.
-
-- **41 unit tests across 7 suites** covering roundtrip, slot management, schema compatibility (forward & backward), encryption posture (wrong password → clean failure), signals, atomic writes, and HMAC/validation gates. Every change runs them.
 
 ### Demos of the extensibility story
 
