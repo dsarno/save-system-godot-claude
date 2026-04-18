@@ -2,6 +2,10 @@
 
 A drop-in save system for Godot 4, plus a small 3D demo that exercises it.
 
+<p align="center">
+  <img src="docs/blocks.png" alt="Blocks demo — Tron-style arena, four colored cubes, styled HUD" width="520">
+</p>
+
 Four cubes wander a neon-grid arena, bump each other, and lose HP on impact. You control one of them with **WASD + Space**. Whoever's left standing wins. Save/load at any moment via F5/F9 or the ESC slot menu — positions, velocities, HP, kill/jump counts, the player designation, career totals across sessions, and the event log all restore exactly.
 
 ## How to run
