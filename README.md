@@ -2,7 +2,7 @@
 
 A drop-in save system for Godot 4, plus a small 3D demo that exercises it.
 
-This project demonstrates a production-minded save architecture: encrypted slot files with metadata sidecars, atomic write + backup rotation, schema-versioned payloads, HMAC integrity verification, and two-phase validation before any world state is applied. It is designed to stay easy to integrate while still handling real-world failure modes and evolution over time.
+This project demonstrates a production-minded save architecture while staying easy to integrate into a normal Godot project.
 
 <p align="center">
   <img src="docs/blocks.png" alt="Blocks demo — Tron-style arena, four colored cubes, styled HUD" width="520">
@@ -37,6 +37,33 @@ Save systems are often a `var my_state = {}` + `JSON.stringify` + `FileAccess.op
 - **Two-phase load with per-saveable validation.** Saveables may implement `validate_data(dict) -> String` (empty string = OK, otherwise a failure reason). The library runs every saveable's validator *before* any `load_data` fires — a single rejection aborts the whole load, so a bad save can't leave the world in a partially-applied state. Example checks in the demo: `hp > max_hp`, NaN positions, `winner_index` out of range, negative counters.
 
 - **41 unit tests across 7 suites** covering roundtrip, slot management, schema compatibility (forward & backward), encryption posture (wrong password → clean failure), signals, atomic writes, and HMAC/validation gates. Every change runs them.
+
+### What the demo actually saves
+
+**Envelope (library-level, schema v2):**
+- `schema_version` — format version, gated on load
+- `hmac` — SHA256 signature over the body
+- `body` — JSON-stringified inner payload
+
+**Inner payload (one dict per slot):**
+- `game_version` — for cross-build diagnostics
+- `saved_at_unix` — timestamp of the save
+- `play_time_seconds` — elapsed time at the moment of save
+- `level_name` — which scene was active
+- `saveables` — dict keyed by `save_id` holding each saveable's data
+
+**Sidecar (`.meta.tres`, unencrypted, per slot):**
+- `slot_id`, `display_name`, `saved_at_unix`, `play_time_seconds`, `level_name`, `game_version`, `thumbnail` (field exists, not populated)
+
+**Per-saveable contents in this project:**
+
+| Saveable | `save_id` | Fields |
+|---|---|---|
+| `Arena` | `"arena"` | `elapsed_seconds`, `num_blocks`, `blocks` (array of `{scene, state}`), `winner_index`, `event_log` (array of `{t, kind, block?}`) |
+| `Block` (inside each `blocks[].state`) | — (owned by Arena) | `hp`, `max_hp`, `color`, `name`, `alive`, `is_player`, `jumps`, `walls_bumped`, `pos`, `rot`, `lv` (linear velocity), `av` (angular velocity) |
+| `GameStats` | `"game_stats"` | `games_played`, `wins`, `total_jumps`, `total_walls_bumped` |
+
+Each field in each saveable's `load_data` uses `.get(key, default)`, so adding or removing any entry is safe against older/newer saves.
 
 ## How to run
 
@@ -78,33 +105,6 @@ No external dependencies, no package manager, no build step.
 - `Block.save_data` grew `jumps` and `walls_bumped` late in development; old saves still load with 0 defaults.
 - `GameStats` is a completely separate saveable added as an autoload — career totals persist across games and slots without the library knowing it exists.
 - `Arena.event_log` is an array-of-dicts (`{t, kind, block}`) that shows structured collection data round-tripping cleanly.
-
-### What the demo actually saves
-
-**Envelope (library-level, schema v2):**
-- `schema_version` — format version, gated on load
-- `hmac` — SHA256 signature over the body
-- `body` — JSON-stringified inner payload
-
-**Inner payload (one dict per slot):**
-- `game_version` — for cross-build diagnostics
-- `saved_at_unix` — timestamp of the save
-- `play_time_seconds` — elapsed time at the moment of save
-- `level_name` — which scene was active
-- `saveables` — dict keyed by `save_id` holding each saveable's data
-
-**Sidecar (`.meta.tres`, unencrypted, per slot):**
-- `slot_id`, `display_name`, `saved_at_unix`, `play_time_seconds`, `level_name`, `game_version`, `thumbnail` (field exists, not populated)
-
-**Per-saveable contents in this project:**
-
-| Saveable | `save_id` | Fields |
-|---|---|---|
-| `Arena` | `"arena"` | `elapsed_seconds`, `num_blocks`, `blocks` (array of `{scene, state}`), `winner_index`, `event_log` (array of `{t, kind, block?}`) |
-| `Block` (inside each `blocks[].state`) | — (owned by Arena) | `hp`, `max_hp`, `color`, `name`, `alive`, `is_player`, `jumps`, `walls_bumped`, `pos`, `rot`, `lv` (linear velocity), `av` (angular velocity) |
-| `GameStats` | `"game_stats"` | `games_played`, `wins`, `total_jumps`, `total_walls_bumped` |
-
-Each field in each saveable's `load_data` uses `.get(key, default)`, so adding or removing any entry is safe against older/newer saves.
 
 ## What it's lacking (honest list)
 
